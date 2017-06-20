@@ -1,3 +1,2 @@
-__version__ = 0.1
-
-from .chunker import TextChunk, SkipChunk, Elt, HtmlChunker  # noqa: E402,F401
+from .version import __version__  # noqa: F401
+from .chunker import TextChunk, SkipChunk, Elt, HtmlChunker  # noqa: F401

@@ -1,7 +1,7 @@
 |logo| boned-html
 ##################
 
-|pypi|
+|pypi| |travis| |coveralls|
 
 Boned html is a small python library.
 
@@ -20,15 +20,20 @@ but at other tags (`<h1>`, `<p>`, etc.).
 As you reinject the text, semantic tags will be added back to text,
 and general html layout will be respected.
 
-.. |logo| image::./images/boned-html-64.png
+.. |logo| image:: ./images/boned-html-64.png
 
 .. |pypi| image:: http://img.shields.io/pypi/v/boned-html.svg?style=flat
     :target: https://pypi.python.org/pypi/boned-html
+.. |travis| image:: http://img.shields.io/travis/jurismarches/boned-html/master.svg?style=flat
+    :target: https://travis-ci.org/jurismarches/boned-html
+.. |coveralls| image:: http://img.shields.io/coveralls/jurismarches/boned-html/master.svg?style=flat
+    :target: https://coveralls.io/r/jurismarches/boned-html
 
 Installation
 ============
 
 ::
+
   pip install boned-html
 
 Usage
@@ -40,6 +45,7 @@ The fonctionalities are provided by the class `boned_html.Chunker`__ with method
 * `unchunk` to put back chunks together providing css classes for pieces of text.
 
 .. __: ./boned_html/chunker.py
+
 
 
 A quick example: imagine we have a function to detect a tel number value in a sentence::
