@@ -73,26 +73,29 @@ And an html::
 We chunk::
 
    >>> import lxml.html
-   >>> from boned_html import HtmlChunker
-   >>> chunker = HtmlChunker()
+   >>> from boned_html import HtmlBoner
    >>> tree = lxml.html.fromstring(html)
-   >>> chunks = chunker.chunk_tree(tree)
+   >>> boned = HtmlBoner(tree)
 
 We evaluate each text and assign "tel" class to it if there is a telephone::
 
-   >>> from boned_html import TextChunk
-   >>> classes = [
-   ...     get_tel(chunk.text) if isinstance(chunk, TextChunk) else None
-   ...     for chunk in chunks]
+   >>> for i, text in enumerate(boned):
+   ...     if text is not None:
+   ...         boned.set_classes(i, get_tel(text))
 
 We now rebuild the tree::
 
-   >>> new_tree = chunker.unchunk(tree, chunks, classes)
-   >>> print(lxml.html.tostring(new_tree).decode("utf-8"))
+   >>> boned.tree
+   <Element html ...>
+   >>> print(boned)
    <html>
      <head><title>call +33 00 00 00 00</title></head>
      <body>
        <p>To get an operator <em>call</em></p>
-       <p><b>call</b> <em>(country) </em><span class="tel" id="chunk-7"><em>+33</em> 00 00 00 00</span></p>
+       <p><b>call</b> <em>(country) </em><span class="tel" id="chunk-6-1"><em>+33</em> 00 00 00 00</span></p>
      </body>
    </html>
+
+We have a specific span around our number,
+also opening and closure of `em` tag was handled,
+and phone number in `head/title` remains the same.

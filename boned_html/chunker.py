@@ -1,11 +1,7 @@
-"""This module provide a class that helps you split an html in small text chunks,
-at the level of one or more sentence.
-You can then latter recompose the html adding a specific class to each text.
+"""
+This module contains a class that does the though work of chunk / unchunking html.
 
-This is helpfull eg. to colorize html text after you have assigned a category to each sentence
-(maybe using machine learning or whatever heuristic).
-
-
+You may look at :py:class:`.boner.HtmlBoner` if you are looking for a more usable class.
 """
 
 import copy
@@ -119,8 +115,8 @@ class HtmlChunker:
             # make my text
             chunks.append(TextChunk(text, semantics, tree, False))
             # add children sentences
-            for child, tail in zip(children, tails):
-                chunks.extend(self.chunk_tree(child, tail))
+            for child, child_tail in zip(children, tails):
+                chunks.extend(self.chunk_tree(child, child_tail))
         # process my tail
         if tree.tail or tail:
             text = _s(tree.tail)
@@ -186,50 +182,57 @@ class HtmlChunker:
         return intro, children
 
     def _rebuild_text(self, chunk, parent, sentence_classes,
-                      span_id_prefix, no_class_no_span, sentence_num):
+                      span_id_prefix, no_class_no_span, chunk_num):
         """adding text to parent, sentence by sentence
         """
         # sentence by sentence
+        sentence_num = -1
         sentence_start = 0
-        text_parent = parent
+        last_element = parent
+        grand_parent = parent.getparent()
         for sentence, classes in sentence_classes:
             if sentence is None:
                 continue
             sentence_num += 1
             sentence_end = sentence_start + len(sentence)
-            previous_text_parent = text_parent
+
+            # reintroduced semantics elts
+            crossing = list(
+                self._crossing_semantics(sentence_start, sentence_end, chunk.elts))
+            text, children = self._introduce_semantics(sentence, crossing)
+
             if classes or not no_class_no_span:
                 if isinstance(classes, str):
                     classes = [classes]
                 # we enclose text in a span of right class
                 attrib = {}
                 if span_id_prefix is not None:
-                    attrib["id"] = "%s%d" % (span_id_prefix, sentence_num)
+                    attrib["id"] = "%s%d-%d" % (span_id_prefix, chunk_num, sentence_num)
                 if classes:
                     attrib["class"] = " ".join(classes)
-                text_parent = html.Element("span", attrib=attrib)
+                span = html.Element("span", attrib=attrib)
+                span.text = text
+                for child in children:
+                    span.append(child)
                 if chunk.istail:
                     # by chance we are processing in an ordered manner, so we can append
-                    parent.getparent().append(text_parent)
+                    grand_parent.append(span)
                 else:
-                    parent.append(text_parent)
-                is_tail = False  # we are not tail of text_parent
+                    parent.append(span)
+                last_element = span
             else:
-                text_parent = parent
-                is_tail = sentence_start != 0 or chunk.istail
-            # reintroduced semantics elts
-            crossing = list(
-                self._crossing_semantics(sentence_start, sentence_end, chunk.elts))
-            text, children = self._introduce_semantics(sentence, crossing)
-            if is_tail:
-                # add to previous element
-                previous_text_parent.tail = text
-            else:
-                text_parent.text = text
-            for child in children:  # add semantics
-                text_parent.append(child)
+                # we introduce our text
+                if last_element != parent or chunk.istail:
+                    last_element.tail = _s(last_element.tail) + text
+                else:
+                    last_element.text = _s(last_element.text) + text
+                # and children
+                if children:
+                    _parent = grand_parent if chunk.istail else parent
+                    for child in children:
+                        _parent.append(child)
+                    last_element = children[-1]
             sentence_start = sentence_end
-        return sentence_num
 
     def unchunk(self, tree, chunks, chunk_classes, span_id_prefix="chunk-", no_class_no_span=True):
         """given a tree, it's chunks and classifications for sentences in chunks,
@@ -242,8 +245,7 @@ class HtmlChunker:
         :return: a new tree
         """
         old_to_new = {}  # track elements between old and new tree
-        sentence_num = 0
-        for chunk, sentence_classes in zip(chunks, chunk_classes):
+        for chunk_num, (chunk, sentence_classes) in enumerate(zip(chunks, chunk_classes)):
             if isinstance(chunk, SkipChunk):
                 # just clone
                 if chunk.parent is not None and chunk.parent.getparent() is not None:
@@ -276,8 +278,8 @@ class HtmlChunker:
                     # append to root
                     new_parent = tree
             if not isinstance(chunk, SkipChunk):
-                sentence_num = self._rebuild_text(
+                self._rebuild_text(
                     chunk, new_parent, sentence_classes,
-                    span_id_prefix, no_class_no_span, sentence_num)
+                    span_id_prefix, no_class_no_span, chunk_num)
 
         return old_to_new[tree]
